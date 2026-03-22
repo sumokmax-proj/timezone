@@ -12,10 +12,11 @@ async function touchDrag(page, b0, b2) {
     return `new Touch({identifier:1,target:document.elementFromPoint(${x},${y})||document.body,clientX:${x},clientY:${y},pageX:${x},pageY:${y},screenX:${x},screenY:${y}})`;
   }
 
-  // touchstart
+  // touchstart — dispatch on the element at the actual coordinates so e.target is correct
   await page.evaluate(([x, y]) => {
     function mkT(x, y) { return new Touch({ identifier: 1, target: document.elementFromPoint(x, y) || document.body, clientX: x, clientY: y, pageX: x, pageY: y, screenX: x, screenY: y }); }
-    document.querySelector('.clock-card').dispatchEvent(new TouchEvent('touchstart', { bubbles: true, cancelable: true, touches: [mkT(x, y)], changedTouches: [mkT(x, y)] }));
+    const el = document.elementFromPoint(x, y) || document.body;
+    el.dispatchEvent(new TouchEvent('touchstart', { bubbles: true, cancelable: true, touches: [mkT(x, y)], changedTouches: [mkT(x, y)] }));
   }, [sx, sy]);
 
   await page.waitForTimeout(200); // wait for 150ms timer
@@ -67,8 +68,8 @@ test.describe('World Clock — Full Feature Suite', () => {
     console.log('✅ 실시간 업데이트 OK:', ss1, '->', ss2);
   });
 
-  // ── 3. 기본값: 초 숨김 ────────────────────────────────────────────────────
-  test('3. 기본값 - 초(ss) 숨김', async ({ page }) => {
+  // ── 3. 기본값: 초 표시 (showSeconds 기본값 = true) ──────────────────────
+  test('3. 기본값 - 초(ss) 표시됨', async ({ page }) => {
     await page.setViewportSize(MOBILE);
     await page.goto(FILE_URL);
     await page.evaluate(() => localStorage.removeItem('tz-settings'));
@@ -76,8 +77,8 @@ test.describe('World Clock — Full Feature Suite', () => {
     await page.waitForTimeout(400);
     const display = await page.locator('.clock-card').first().locator('.ss-wrap')
       .evaluate(el => getComputedStyle(el).display);
-    expect(display).toBe('none');
-    console.log('✅ 기본값 초 숨김 OK');
+    expect(display).not.toBe('none');
+    console.log('✅ 기본값 초 표시 OK');
   });
 
   // ── 4. 기본값: 24시간 ────────────────────────────────────────────────────
@@ -108,25 +109,31 @@ test.describe('World Clock — Full Feature Suite', () => {
   });
 
   // ── 6. 설정: 초 표시 토글 ────────────────────────────────────────────────
-  test('6. 설정 - 초 표시 토글', async ({ page }) => {
+  test('6. 설정 - 초 표시 토글 (ON→OFF→ON)', async ({ page }) => {
     await page.setViewportSize(MOBILE);
     await page.goto(FILE_URL);
     await page.evaluate(() => localStorage.removeItem('tz-settings'));
     await page.reload();
     await page.waitForTimeout(400);
-    // 초 숨겨진 상태
+    // 기본값: 초 보임
     let display = await page.locator('.clock-card').first().locator('.ss-wrap')
       .evaluate(el => getComputedStyle(el).display);
-    expect(display).toBe('none');
-    // 설정 열고 초 ON
+    expect(display).not.toBe('none');
+    // 설정 열고 초 OFF
     await page.click('#settingsBtn');
     await page.waitForTimeout(200);
     await page.click('#tog-showSeconds');
     await page.waitForTimeout(200);
     display = await page.locator('.clock-card').first().locator('.ss-wrap')
       .evaluate(el => getComputedStyle(el).display);
+    expect(display).toBe('none');
+    // 다시 초 ON
+    await page.click('#tog-showSeconds');
+    await page.waitForTimeout(200);
+    display = await page.locator('.clock-card').first().locator('.ss-wrap')
+      .evaluate(el => getComputedStyle(el).display);
     expect(display).not.toBe('none');
-    console.log('✅ 초 표시 토글 OK');
+    console.log('✅ 초 표시 토글 ON→OFF→ON OK');
   });
 
   // ── 7. 설정: AM/PM 전환 ──────────────────────────────────────────────────
@@ -198,21 +205,37 @@ test.describe('World Clock — Full Feature Suite', () => {
     console.log('✅ 진행률 바 OK:', widths.map(w => w.toFixed(1) + '%'));
   });
 
-  // ── 12. 드래그 순서 변경 ─────────────────────────────────────────────────
-  test('12. 터치 드래그 - 카드 순서 변경', async ({ browser }) => {
+  // ── 12. 드래그 순서 변경 (핸들에서 시작) ─────────────────────────────────
+  test('12. 터치 드래그 - 핸들에서 시작, 카드 순서 변경', async ({ browser }) => {
     const ctx = await browser.newContext({ ...MOBILE, permissions: [] });
     const page = await ctx.newPage();
     await page.goto(FILE_URL);
     await page.waitForTimeout(600);
     const before = await page.locator('.clock-card').evaluateAll(els => els.map(e => e.dataset.id));
     console.log('드래그 전:', before);
-    const b0 = await page.locator('.clock-card').nth(0).boundingBox();
-    const b2 = await page.locator('.clock-card').nth(2).boundingBox();
-    await touchDrag(page, b0, b2);
+
+    // 핸들은 카드 우측 끝 52px 영역 — 핸들 중앙에서 시작
+    const card0 = await page.locator('.clock-card').nth(0).boundingBox();
+    const card2 = await page.locator('.clock-card').nth(2).boundingBox();
+
+    // 시작: 첫 번째 카드의 핸들 (우측 끝 26px 지점)
+    const handleBox = {
+      x: card0.x + card0.width - 26,
+      y: card0.y + card0.height / 2,
+      width: 1, height: 1
+    };
+    // 끝: 세 번째 카드 중앙
+    const destBox = {
+      x: card2.x + card2.width / 2,
+      y: card2.y + card2.height / 2,
+      width: 1, height: 1
+    };
+    await touchDrag(page, handleBox, destBox);
+
     const after = await page.locator('.clock-card').evaluateAll(els => els.map(e => e.dataset.id));
     console.log('드래그 후:', after);
     expect(before.join(',')).not.toBe(after.join(','));
-    console.log('✅ 드래그 순서 변경 OK');
+    console.log('✅ 드래그(핸들) 순서 변경 OK');
     await ctx.close();
   });
 

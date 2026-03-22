@@ -53,12 +53,17 @@
       --gps-bg:       rgba(0,0,0,0.05);
     }
 
-    html, body {
-      min-height: 100%;
+    html {
+      height: 100%; height: 100dvh;
+    }
+    body {
+      height: 100%; height: 100dvh;
+      display: flex; flex-direction: column;
       font-family: 'Inter', sans-serif;
       color: var(--text-primary);
       -webkit-font-smoothing: antialiased;
       overscroll-behavior: none;
+      overflow: hidden;
       background: var(--bg);
       transition: background 0.35s, color 0.35s;
     }
@@ -78,6 +83,7 @@
 
     /* ── Header ── */
     header {
+      flex-shrink: 0;
       position: sticky; top: 0; z-index: 100;
       background: var(--header-bg);
       backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
@@ -123,22 +129,28 @@
 
     /* ── Main ── */
     main {
+      flex: 1; min-height: 0;
       position: relative; z-index: 1;
-      max-width: 480px; margin: 0 auto;
-      padding: 20px 16px 40px;
+      display: flex; flex-direction: column;
+      max-width: 480px; width: 100%; margin: 0 auto;
+      padding: 14px 14px max(env(safe-area-inset-bottom), 14px);
     }
-    .card-list { display: flex; flex-direction: column; gap: 12px; }
+    .card-list {
+      flex: 1; min-height: 0;
+      display: flex; flex-direction: column;
+      gap: 10px;
+    }
 
     /* ── Clock Card ── */
     .clock-card {
+      flex: 1; min-height: 0;
       position: relative;
       background: var(--card);
       border: 1px solid var(--card-border);
       border-radius: 20px;
-      padding: 20px 20px 0;
-      cursor: grab;
+      padding: 18px 20px 0;
+      cursor: default;
       user-select: none; -webkit-user-select: none;
-      touch-action: none;
       overflow: hidden;
       box-shadow: var(--card-shadow);
       transition: box-shadow 0.2s, border-color 0.2s, opacity 0.18s, background 0.35s;
@@ -232,7 +244,7 @@
     /* Card bottom row */
     .card-bottom {
       display: flex; align-items: center; justify-content: space-between;
-      margin-bottom: 14px;
+      margin-bottom: 12px;
     }
     .date-display { font-size: 13px; color: var(--text-muted); }
 
@@ -264,19 +276,23 @@
       transition: width 1s linear;
     }
 
-    /* Drag handle */
+    /* Drag handle — only this area triggers drag */
     .drag-handle {
-      position: absolute; top: 50%; right: 16px;
-      transform: translateY(-50%);
-      display: flex; flex-direction: column; gap: 3.5px;
-      padding: 8px 4px;
-      opacity: 0.18; transition: opacity 0.2s;
+      position: absolute; top: 0; right: 0; bottom: 0;
+      width: 52px;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 4px;
+      padding: 0 14px;
+      opacity: 0.25; transition: opacity 0.2s;
+      cursor: grab; touch-action: none;
     }
-    .clock-card:hover .drag-handle,
-    .clock-card:active .drag-handle { opacity: 0.5; }
+    .drag-handle:hover,
+    .drag-handle:active { opacity: 0.65; cursor: grabbing; }
     .drag-handle span {
-      display: block; width: 16px; height: 2px;
+      display: block; width: 18px; height: 2px;
       background: var(--text-primary); border-radius: 2px;
+      pointer-events: none;
     }
 
     /* ── Settings Bottom Sheet ── */
@@ -358,13 +374,6 @@
 
     .sheet-sep { height: 1px; background: var(--separator); margin: 4px 20px; }
 
-    /* Footer */
-    footer {
-      position: relative; z-index: 1;
-      text-align: center; padding: 0 20px 28px;
-      font-size: 11px; color: var(--text-muted);
-    }
-
     /* ── Animations ── */
     @keyframes slideUp {
       from { opacity: 0; transform: translateY(18px); }
@@ -403,8 +412,6 @@
 <main>
   <div class="card-list" id="cardList"></div>
 </main>
-
-<footer>Hold &amp; drag cards to reorder</footer>
 
 <!-- Settings Bottom Sheet -->
 <div class="sheet-overlay" id="sheetOverlay">
@@ -459,7 +466,7 @@
   const LS_SETTINGS = 'tz-settings';
 
   // ── Settings ──────────────────────────────────────────────────────────────
-  const DEFAULTS = { showSeconds: false, use24h: true, darkMode: true };
+  const DEFAULTS = { showSeconds: true, use24h: true, darkMode: true };
   let S = (() => {
     try { const s = JSON.parse(localStorage.getItem(LS_SETTINGS)); if (s) return { ...DEFAULTS, ...s }; } catch(_) {}
     return { ...DEFAULTS };
@@ -548,40 +555,17 @@
     return card;
   }
 
-  // ── Render (FLIP animation for reorder) ───────────────────────────────────
-  function renderAll(flip = true) {
+  // ── Render ────────────────────────────────────────────────────────────────
+  let _firstRender = true;
+  function renderAll() {
     const list = document.getElementById('cardList');
-    const firstPos = new Map();
-    if (flip) {
-      [...list.querySelectorAll('.clock-card')].forEach(c =>
-        firstPos.set(c.dataset.id, c.getBoundingClientRect())
-      );
-    }
     list.innerHTML = '';
     order.forEach(id => {
       const card = buildCard(id);
-      if (!flip) card.classList.add('no-anim');
+      if (!_firstRender) card.classList.add('no-anim'); // no animation on reorder
       list.appendChild(card);
     });
-    // FLIP
-    if (flip && firstPos.size) {
-      [...list.querySelectorAll('.clock-card')].forEach(card => {
-        const first = firstPos.get(card.dataset.id);
-        if (!first) return;
-        card.classList.add('no-anim');
-        const dy = first.top - card.getBoundingClientRect().top;
-        if (Math.abs(dy) < 1) return;
-        card.style.cssText += 'transition:none;transform:translateY(' + dy + 'px)';
-        requestAnimationFrame(() => {
-          card.style.transition = 'transform 0.32s cubic-bezier(0.25,0.46,0.45,0.94)';
-          card.style.transform  = 'translateY(0)';
-          card.addEventListener('transitionend', () => {
-            card.style.transition = card.style.transform = '';
-            card.classList.remove('no-anim');
-          }, { once: true });
-        });
-      });
-    }
+    _firstRender = false;
   }
 
   // ── Live update (every second, no re-render) ──────────────────────────────
@@ -623,7 +607,7 @@
       localTZ = Intl.DateTimeFormat().resolvedOptions().timeZone;
       fetch(`https://nominatim.openstreetmap.org/reverse?lat=${pos.coords.latitude}&lon=${pos.coords.longitude}&format=json`)
         .then(r => r.json())
-        .then(d => { const cc = d?.address?.country_code?.toUpperCase(); if (cc) applyGPS(cc); renderAll(false); })
+        .then(d => { const cc = d?.address?.country_code?.toUpperCase(); if (cc) applyGPS(cc); renderAll(); })
         .catch(() => {});
     }, () => setGPSUI('denied', 'Location off'));
   }
@@ -703,19 +687,21 @@
   }
   function onDragStart(e) {
     clearDrag();
+    // Only activate drag when touching the handle (3-line grip)
+    if (!e.target.closest('.drag-handle')) return;
     const card = e.target.closest('.clock-card[data-id]');
     if (!card) return;
     const { x, y } = ptr(e);
     ds.id = card.dataset.id; ds.card = card;
     ds.startX = ds.curX = x; ds.startY = ds.curY = y;
-    ds.timer = setTimeout(() => startGhost(card, ds.curX, ds.curY), 150);
+    // No long-press timer: handle touch = intentional drag
   }
   function onDragMove(e) {
     if (!ds.id) return;
     const { x, y } = ptr(e);
     ds.curX = x; ds.curY = y;
     if (!ds.started) {
-      if (Math.hypot(x - ds.startX, y - ds.startY) > 6) { clearTimeout(ds.timer); startGhost(ds.card, ds.startX, ds.startY); }
+      if (Math.hypot(x - ds.startX, y - ds.startY) > 4) startGhost(ds.card, ds.startX, ds.startY);
       else return;
     }
     e.preventDefault();
@@ -725,7 +711,6 @@
     if (target && target.dataset.id !== ds.id) target.classList.add('drag-over');
   }
   function onDragEnd(e) {
-    clearTimeout(ds.timer);
     if (!ds.started || !ds.id) { clearDrag(); return; }
     try {
       const { x, y } = ptr(e);
@@ -733,7 +718,7 @@
       if (target && target.dataset.id !== ds.id) {
         const from = order.indexOf(ds.id), to = order.indexOf(target.dataset.id);
         order.splice(from, 1); order.splice(to, 0, ds.id);
-        saveOrder(); clearDrag(); renderAll(true); return;
+        saveOrder(); clearDrag(); renderAll(); return;
       }
     } catch(_) {}
     clearDrag();
@@ -751,7 +736,7 @@
 
   // ── Init ──────────────────────────────────────────────────────────────────
   applyTheme();
-  renderAll(false);   // initial render (slideUp animation via CSS)
+  renderAll();   // initial render (slideUp animation via CSS)
   startClock();
   syncToggles();
   initDrag();
