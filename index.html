@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>World Clock</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0D0D0F;
+      --card: #13131A;
+      --card-border: rgba(255,255,255,0.07);
+      --text-primary: #F0F0F5;
+      --text-muted: #6B6B80;
+      --text-dim: #9090A8;
+      --accent-1: #A855F7;
+      --accent-2: #22D3EE;
+      --drag-bg: #1E1E2E;
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      font-family: 'Inter', sans-serif;
+      color: var(--text-primary);
+      -webkit-font-smoothing: antialiased;
+      overscroll-behavior: none;
+    }
+
+    /* ── Header ── */
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(13,13,15,0.85);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      padding: 18px 20px 14px;
+      border-bottom: 1px solid var(--card-border);
+    }
+    .header-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      max-width: 480px;
+      margin: 0 auto;
+    }
+    .header-title {
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+      background: linear-gradient(90deg, var(--accent-1), var(--accent-2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .header-sub {
+      font-size: 11px;
+      color: var(--text-muted);
+      font-weight: 400;
+      letter-spacing: 0.3px;
+    }
+    .gps-badge {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 11px;
+      color: var(--text-muted);
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--card-border);
+      border-radius: 20px;
+      padding: 5px 10px;
+    }
+    .gps-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--text-muted);
+      transition: background 0.4s;
+    }
+    .gps-dot.active { background: #4ADE80; box-shadow: 0 0 6px #4ADE80; }
+    .gps-dot.denied { background: #F87171; }
+
+    /* ── Main container ── */
+    main {
+      max-width: 480px;
+      margin: 0 auto;
+      padding: 20px 16px 40px;
+    }
+
+    /* ── Clock Card ── */
+    .card-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .clock-card {
+      position: relative;
+      background: var(--card);
+      border: 1px solid var(--card-border);
+      border-radius: 20px;
+      padding: 22px 20px 20px;
+      cursor: grab;
+      user-select: none;
+      -webkit-user-select: none;
+      transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease, opacity 0.18s ease;
+      touch-action: none;
+      will-change: transform;
+      overflow: hidden;
+    }
+    .clock-card::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: 20px;
+      opacity: 0;
+      transition: opacity 0.3s;
+      pointer-events: none;
+    }
+    /* Day tint */
+    .clock-card.day::before {
+      background: radial-gradient(ellipse at top right, rgba(251,191,36,0.07) 0%, transparent 60%);
+      opacity: 1;
+    }
+    /* Night tint */
+    .clock-card.night::before {
+      background: radial-gradient(ellipse at bottom left, rgba(99,102,241,0.09) 0%, transparent 60%);
+      opacity: 1;
+    }
+
+    .clock-card.dragging {
+      opacity: 0.4;
+      border-color: rgba(168,85,247,0.3);
+    }
+    .clock-card.drag-over {
+      border-color: rgba(34,211,238,0.5);
+      box-shadow: 0 0 0 1px rgba(34,211,238,0.3), 0 8px 32px rgba(0,0,0,0.4);
+      transform: scale(1.01);
+    }
+
+    /* drag ghost */
+    .drag-ghost {
+      position: fixed;
+      pointer-events: none;
+      z-index: 9999;
+      opacity: 0.92;
+      transform: scale(1.04) rotate(1.5deg);
+      box-shadow: 0 20px 50px rgba(0,0,0,0.6), 0 0 0 1px rgba(168,85,247,0.4);
+      border-radius: 20px;
+      background: var(--drag-bg);
+      border: 1px solid rgba(168,85,247,0.3);
+      transition: none;
+    }
+
+    /* ── Drag handle ── */
+    .drag-handle {
+      position: absolute;
+      top: 50%;
+      right: 18px;
+      transform: translateY(-50%);
+      display: flex;
+      flex-direction: column;
+      gap: 3.5px;
+      padding: 8px 4px;
+      opacity: 0.3;
+      transition: opacity 0.2s;
+    }
+    .clock-card:active .drag-handle,
+    .clock-card:hover .drag-handle { opacity: 0.7; }
+    .drag-handle span {
+      display: block;
+      width: 18px;
+      height: 2px;
+      background: var(--text-primary);
+      border-radius: 2px;
+    }
+
+    /* ── Card content ── */
+    .card-content { padding-right: 36px; }
+
+    .card-top {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    .country-flag {
+      font-size: 22px;
+      line-height: 1;
+    }
+    .city-info {}
+    .city-name {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text-primary);
+      letter-spacing: -0.2px;
+    }
+    .country-tag {
+      display: inline-block;
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      color: var(--accent-2);
+      background: rgba(34,211,238,0.1);
+      border: 1px solid rgba(34,211,238,0.15);
+      border-radius: 6px;
+      padding: 2px 7px;
+      margin-top: 3px;
+    }
+
+    .time-display {
+      font-size: 52px;
+      font-weight: 800;
+      letter-spacing: -2px;
+      color: var(--text-primary);
+      line-height: 1;
+      margin-bottom: 6px;
+      font-variant-numeric: tabular-nums;
+    }
+    .time-display .ampm {
+      font-size: 18px;
+      font-weight: 500;
+      letter-spacing: 0px;
+      color: var(--text-dim);
+      margin-left: 4px;
+      vertical-align: middle;
+    }
+
+    .card-bottom {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .date-display {
+      font-size: 13px;
+      color: var(--text-muted);
+      font-weight: 400;
+    }
+    .day-night-badge {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 11px;
+      color: var(--text-muted);
+      background: rgba(255,255,255,0.04);
+      border-radius: 10px;
+      padding: 3px 8px;
+    }
+
+    /* top-card accent line */
+    .clock-card:first-child::after {
+      content: '';
+      position: absolute;
+      top: 0; left: 20px; right: 20px;
+      height: 2px;
+      border-radius: 0 0 4px 4px;
+      background: linear-gradient(90deg, var(--accent-1), var(--accent-2));
+      opacity: 0.8;
+    }
+
+    /* GPS label */
+    .gps-label {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.6px;
+      text-transform: uppercase;
+      color: #4ADE80;
+      background: rgba(74,222,128,0.08);
+      border: 1px solid rgba(74,222,128,0.2);
+      border-radius: 6px;
+      padding: 2px 7px;
+      display: none;
+    }
+    .card-list .clock-card:first-child .gps-label { display: inline-block; }
+
+    /* Footer */
+    footer {
+      text-align: center;
+      padding: 0 20px 20px;
+      font-size: 11px;
+      color: var(--text-muted);
+      letter-spacing: 0.3px;
+    }
+
+    /* ── Animate in ── */
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .clock-card { animation: slideUp 0.35s ease both; }
+    .clock-card:nth-child(1) { animation-delay: 0.05s; }
+    .clock-card:nth-child(2) { animation-delay: 0.12s; }
+    .clock-card:nth-child(3) { animation-delay: 0.19s; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <div>
+      <div class="header-title">World Clock</div>
+      <div class="header-sub">Live · 3 Cities</div>
+    </div>
+    <div class="gps-badge">
+      <span class="gps-dot" id="gpsDot"></span>
+      <span id="gpsLabel">Locating…</span>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="card-list" id="cardList"></div>
+</main>
+
+<footer>Hold &amp; drag cards to reorder</footer>
+
+<script>
+  // ── City data ──────────────────────────────────────────────────────────────
+  const CITIES = {
+    seoul:     { id: 'seoul',     name: 'Seoul',     country: 'South Korea',    flag: '🇰🇷', tz: 'Asia/Seoul',         countryCode: 'KR' },
+    hanoi:     { id: 'hanoi',     name: 'Hanoi',     country: 'Vietnam',        flag: '🇻🇳', tz: 'Asia/Ho_Chi_Minh',  countryCode: 'VN' },
+    sandiego:  { id: 'sandiego',  name: 'San Diego', country: 'United States',  flag: '🇺🇸', tz: 'America/Los_Angeles', countryCode: 'US' },
+  };
+
+  const DEFAULT_ORDER = ['seoul', 'hanoi', 'sandiego'];
+  const LS_KEY = 'tz-order';
+
+  // ── State ──────────────────────────────────────────────────────────────────
+  let order = loadOrder();
+  let timerID = null;
+
+  // ── Helpers ───────────────────────────────────────────────────────────────
+  function loadOrder() {
+    try {
+      const saved = JSON.parse(localStorage.getItem(LS_KEY));
+      if (Array.isArray(saved) && saved.length === 3 &&
+          saved.every(id => CITIES[id])) return saved;
+    } catch (_) {}
+    return [...DEFAULT_ORDER];
+  }
+
+  function saveOrder() {
+    localStorage.setItem(LS_KEY, JSON.stringify(order));
+  }
+
+  function getTimeData(tz) {
+    const now = new Date();
+    const timeFmt = new Intl.DateTimeFormat('en-US', {
+      timeZone: tz, hour: 'numeric', minute: '2-digit', second: '2-digit',
+      hour12: true
+    });
+    const dateFmt = new Intl.DateTimeFormat('en-US', {
+      timeZone: tz, weekday: 'short', month: 'short', day: 'numeric'
+    });
+    const hourFmt = new Intl.DateTimeFormat('en-US', {
+      timeZone: tz, hour: 'numeric', hour12: false
+    });
+    const rawTime = timeFmt.format(now);          // e.g. "9:45:32 AM"
+    const parts = rawTime.match(/^(\d+):(\d{2}):(\d{2})\s*(AM|PM)$/i);
+    return {
+      hh:   parts ? parts[1].padStart(2, '0') : '--',
+      mm:   parts ? parts[2] : '--',
+      ss:   parts ? parts[3] : '--',
+      ampm: parts ? parts[4] : '',
+      date: dateFmt.format(now),
+      hour: parseInt(hourFmt.format(now), 10),
+    };
+  }
+
+  function isDay(hour) { return hour >= 6 && hour < 20; }
+
+  // ── Render ────────────────────────────────────────────────────────────────
+  function buildCard(cityId) {
+    const city = CITIES[cityId];
+    const t = getTimeData(city.tz);
+    const day = isDay(t.hour);
+
+    const card = document.createElement('div');
+    card.className = `clock-card ${day ? 'day' : 'night'}`;
+    card.dataset.id = cityId;
+    card.innerHTML = `
+      <div class="card-content">
+        <div class="card-top">
+          <span class="country-flag">${city.flag}</span>
+          <div class="city-info">
+            <div class="city-name">
+              ${city.name}
+              <span class="gps-label">GPS</span>
+            </div>
+            <span class="country-tag">${city.country}</span>
+          </div>
+        </div>
+        <div class="time-display">
+          <span class="hh">${t.hh}</span>:<span class="mm">${t.mm}</span>:<span class="ss">${t.ss}</span><span class="ampm">${t.ampm}</span>
+        </div>
+        <div class="card-bottom">
+          <span class="date-display">${t.date}</span>
+          <span class="day-night-badge">${day ? '☀️ Day' : '🌙 Night'}</span>
+        </div>
+      </div>
+      <div class="drag-handle">
+        <span></span><span></span><span></span>
+      </div>
+    `;
+    return card;
+  }
+
+  function renderAll() {
+    const list = document.getElementById('cardList');
+    list.innerHTML = '';
+    order.forEach(id => list.appendChild(buildCard(id)));
+    bindDrag();
+  }
+
+  function updateTimes() {
+    document.querySelectorAll('.clock-card').forEach(card => {
+      const city = CITIES[card.dataset.id];
+      const t = getTimeData(city.tz);
+      const day = isDay(t.hour);
+      card.querySelector('.hh').textContent = t.hh;
+      card.querySelector('.mm').textContent = t.mm;
+      card.querySelector('.ss').textContent = t.ss;
+      card.querySelector('.ampm').textContent = t.ampm;
+      card.querySelector('.date-display').textContent = t.date;
+      card.querySelector('.day-night-badge').textContent = day ? '☀️ Day' : '🌙 Night';
+      card.classList.toggle('day', day);
+      card.classList.toggle('night', !day);
+    });
+  }
+
+  function startClock() {
+    if (timerID) clearInterval(timerID);
+    timerID = setInterval(updateTimes, 1000);
+  }
+
+  // ── GPS ───────────────────────────────────────────────────────────────────
+  function applyGPS(countryCode) {
+    const match = Object.values(CITIES).find(c => c.countryCode === countryCode);
+    if (!match) return;
+    const idx = order.indexOf(match.id);
+    if (idx > 0) {
+      order.splice(idx, 1);
+      order.unshift(match.id);
+      saveOrder();
+      renderAll();
+    }
+  }
+
+  function tryGPS() {
+    if (!navigator.geolocation) { setGPSUI('denied'); return; }
+    navigator.geolocation.getCurrentPosition(
+      pos => {
+        setGPSUI('active', 'Located');
+        // Reverse geocode via open API (no key needed)
+        fetch(`https://nominatim.openstreetmap.org/reverse?lat=${pos.coords.latitude}&lon=${pos.coords.longitude}&format=json`)
+          .then(r => r.json())
+          .then(data => {
+            const cc = data?.address?.country_code?.toUpperCase();
+            if (cc) applyGPS(cc);
+          })
+          .catch(() => {});
+      },
+      () => setGPSUI('denied', 'Location off')
+    );
+  }
+
+  function setGPSUI(state, label) {
+    const dot = document.getElementById('gpsDot');
+    const lbl = document.getElementById('gpsLabel');
+    dot.className = `gps-dot ${state}`;
+    if (label) lbl.textContent = label;
+  }
+
+  // ── Drag & Drop (touch + mouse) ────────────────────────────────────────────
+  function bindDrag() {
+    const list = document.getElementById('cardList');
+    const cards = [...list.querySelectorAll('.clock-card')];
+
+    let ghost = null;
+    let dragId = null;
+    let startX = 0, startY = 0;
+    let offsetX = 0, offsetY = 0;
+
+    function getPointer(e) {
+      const src = e.touches ? e.touches[0] : e;
+      return { x: src.clientX, y: src.clientY };
+    }
+
+    function createGhost(card, x, y) {
+      const rect = card.getBoundingClientRect();
+      offsetX = x - rect.left;
+      offsetY = y - rect.top;
+      ghost = card.cloneNode(true);
+      ghost.className = 'drag-ghost';
+      ghost.style.width  = rect.width  + 'px';
+      ghost.style.height = rect.height + 'px';
+      ghost.style.left   = (x - offsetX) + 'px';
+      ghost.style.top    = (y - offsetY) + 'px';
+      // remove animation from ghost
+      ghost.style.animation = 'none';
+      document.body.appendChild(ghost);
+    }
+
+    function moveGhost(x, y) {
+      if (!ghost) return;
+      ghost.style.left = (x - offsetX) + 'px';
+      ghost.style.top  = (y - offsetY) + 'px';
+    }
+
+    function getCardBelow(x, y) {
+      if (ghost) ghost.style.display = 'none';
+      const el = document.elementFromPoint(x, y);
+      if (ghost) ghost.style.display = '';
+      return el?.closest('.clock-card');
+    }
+
+    function onStart(e) {
+      const card = e.currentTarget;
+      dragId = card.dataset.id;
+      const { x, y } = getPointer(e);
+      startX = x; startY = y;
+      // small delay to distinguish tap vs drag
+      card._dragTimer = setTimeout(() => {
+        card.classList.add('dragging');
+        createGhost(card, x, y);
+      }, 120);
+    }
+
+    function onMove(e) {
+      if (!dragId) return;
+      const { x, y } = getPointer(e);
+      if (!ghost) {
+        // cancel if moved too little
+        if (Math.hypot(x - startX, y - startY) < 4) return;
+      }
+      e.preventDefault();
+      moveGhost(x, y);
+
+      // highlight target
+      const target = getCardBelow(x, y);
+      list.querySelectorAll('.clock-card').forEach(c => c.classList.remove('drag-over'));
+      if (target && target.dataset.id !== dragId) target.classList.add('drag-over');
+    }
+
+    function onEnd(e) {
+      const card = e.currentTarget;
+      clearTimeout(card._dragTimer);
+      if (!ghost) { dragId = null; return; }
+
+      const { x, y } = getPointer(e.changedTouches ? e : e);
+      const last = e.changedTouches ? e.changedTouches[0] : e;
+      const target = getCardBelow(last.clientX, last.clientY);
+
+      if (target && target.dataset.id !== dragId) {
+        const fromIdx = order.indexOf(dragId);
+        const toIdx   = order.indexOf(target.dataset.id);
+        order.splice(fromIdx, 1);
+        order.splice(toIdx, 0, dragId);
+        saveOrder();
+        renderAll();   // re-render & re-bind
+      } else {
+        // cleanup without full re-render
+        list.querySelectorAll('.clock-card').forEach(c => {
+          c.classList.remove('dragging', 'drag-over');
+        });
+      }
+
+      ghost.remove();
+      ghost = null;
+      dragId = null;
+    }
+
+    cards.forEach(card => {
+      card.addEventListener('mousedown',  onStart, { passive: true });
+      card.addEventListener('touchstart', onStart, { passive: true });
+      card.addEventListener('mousemove',  onMove);
+      card.addEventListener('touchmove',  onMove, { passive: false });
+      card.addEventListener('mouseup',    onEnd);
+      card.addEventListener('touchend',   onEnd);
+    });
+  }
+
+  // ── Init ──────────────────────────────────────────────────────────────────
+  renderAll();
+  startClock();
+  tryGPS();
+</script>
+</body>
+</html>
