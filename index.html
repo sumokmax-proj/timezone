@@ -413,7 +413,6 @@
     const list = document.getElementById('cardList');
     list.innerHTML = '';
     order.forEach(id => list.appendChild(buildCard(id)));
-    bindDrag();
   }
 
   function updateTimes() {
@@ -475,118 +474,131 @@
     if (label) lbl.textContent = label;
   }
 
-  // ── Drag & Drop (touch + mouse) ────────────────────────────────────────────
-  function bindDrag() {
+  // ── Drag & Drop ────────────────────────────────────────────────────────────
+  // Single shared drag state — listeners on document (never re-bound)
+  const ds = {
+    id: null, card: null, ghost: null,
+    started: false, timer: null,
+    startX: 0, startY: 0, offX: 0, offY: 0,
+  };
+
+  function ptr(e) {
+    const s = e.touches ? e.touches[0] : (e.changedTouches ? e.changedTouches[0] : e);
+    return { x: s.clientX, y: s.clientY };
+  }
+
+  function startGhost(card, x, y) {
+    const r = card.getBoundingClientRect();
+    ds.offX = x - r.left;
+    ds.offY = y - r.top;
+    const g = card.cloneNode(true);
+    // inline all styles to avoid class conflicts
+    g.removeAttribute('class');
+    g.style.cssText = `
+      position:fixed; pointer-events:none; z-index:9999;
+      width:${r.width}px; height:${r.height}px;
+      left:${r.left}px; top:${r.top}px;
+      animation:none;
+      background:#1E1E2E;
+      border:1px solid rgba(168,85,247,0.5);
+      border-radius:20px;
+      opacity:0.93;
+      transform:scale(1.04) rotate(1deg);
+      box-shadow:0 20px 50px rgba(0,0,0,0.65), 0 0 0 1px rgba(168,85,247,0.35);
+      transition:none;
+      overflow:hidden;
+    `;
+    document.body.appendChild(g);
+    ds.ghost = g;
+    card.classList.add('dragging');
+    ds.started = true;
+  }
+
+  function moveGhost(x, y) {
+    if (!ds.ghost) return;
+    ds.ghost.style.left = (x - ds.offX) + 'px';
+    ds.ghost.style.top  = (y - ds.offY) + 'px';
+  }
+
+  function cardAt(x, y) {
+    if (ds.ghost) ds.ghost.style.visibility = 'hidden';
+    const el = document.elementFromPoint(x, y);
+    if (ds.ghost) ds.ghost.style.visibility = '';
+    return el?.closest?.('.clock-card[data-id]') || null;
+  }
+
+  function clearDrag() {
+    clearTimeout(ds.timer);
+    if (ds.ghost) { ds.ghost.remove(); ds.ghost = null; }
+    if (ds.card)  { ds.card.classList.remove('dragging'); }
+    document.querySelectorAll('.clock-card').forEach(c => c.classList.remove('drag-over'));
+    ds.id = null; ds.card = null; ds.started = false;
+  }
+
+  // ── Document-level handlers (registered once) ──
+  function onDragStart(e) {
+    const card = e.target.closest('.clock-card[data-id]');
+    if (!card) return;
+    const { x, y } = ptr(e);
+    ds.id = card.dataset.id;
+    ds.card = card;
+    ds.startX = x; ds.startY = y;
+    ds.started = false;
+    // Long-press threshold: start ghost after 150ms hold
+    ds.timer = setTimeout(() => startGhost(card, x, y), 150);
+  }
+
+  function onDragMove(e) {
+    if (!ds.id) return;
+    const { x, y } = ptr(e);
+    if (!ds.started) {
+      // Also trigger on move > 6px (no need to hold)
+      if (Math.hypot(x - ds.startX, y - ds.startY) > 6) {
+        clearTimeout(ds.timer);
+        startGhost(ds.card, ds.startX, ds.startY);
+      } else return;
+    }
+    e.preventDefault();
+    moveGhost(x, y);
+    const target = cardAt(x, y);
+    document.querySelectorAll('.clock-card').forEach(c => c.classList.remove('drag-over'));
+    if (target && target.dataset.id !== ds.id) target.classList.add('drag-over');
+  }
+
+  function onDragEnd(e) {
+    clearTimeout(ds.timer);
+    if (!ds.started || !ds.id) { clearDrag(); return; }
+    const { x, y } = ptr(e);
+    const target = cardAt(x, y);
+    if (target && target.dataset.id !== ds.id) {
+      const from = order.indexOf(ds.id);
+      const to   = order.indexOf(target.dataset.id);
+      order.splice(from, 1);
+      order.splice(to, 0, ds.id);
+      saveOrder();
+      clearDrag();
+      renderAll();
+    } else {
+      clearDrag();
+    }
+  }
+
+  function initDrag() {
     const list = document.getElementById('cardList');
-    const cards = [...list.querySelectorAll('.clock-card')];
-
-    let ghost = null;
-    let dragId = null;
-    let startX = 0, startY = 0;
-    let offsetX = 0, offsetY = 0;
-
-    function getPointer(e) {
-      const src = e.touches ? e.touches[0] : e;
-      return { x: src.clientX, y: src.clientY };
-    }
-
-    function createGhost(card, x, y) {
-      const rect = card.getBoundingClientRect();
-      offsetX = x - rect.left;
-      offsetY = y - rect.top;
-      ghost = card.cloneNode(true);
-      ghost.className = 'drag-ghost';
-      ghost.style.width  = rect.width  + 'px';
-      ghost.style.height = rect.height + 'px';
-      ghost.style.left   = (x - offsetX) + 'px';
-      ghost.style.top    = (y - offsetY) + 'px';
-      // remove animation from ghost
-      ghost.style.animation = 'none';
-      document.body.appendChild(ghost);
-    }
-
-    function moveGhost(x, y) {
-      if (!ghost) return;
-      ghost.style.left = (x - offsetX) + 'px';
-      ghost.style.top  = (y - offsetY) + 'px';
-    }
-
-    function getCardBelow(x, y) {
-      if (ghost) ghost.style.display = 'none';
-      const el = document.elementFromPoint(x, y);
-      if (ghost) ghost.style.display = '';
-      return el?.closest('.clock-card');
-    }
-
-    function onStart(e) {
-      const card = e.currentTarget;
-      dragId = card.dataset.id;
-      const { x, y } = getPointer(e);
-      startX = x; startY = y;
-      // small delay to distinguish tap vs drag
-      card._dragTimer = setTimeout(() => {
-        card.classList.add('dragging');
-        createGhost(card, x, y);
-      }, 120);
-    }
-
-    function onMove(e) {
-      if (!dragId) return;
-      const { x, y } = getPointer(e);
-      if (!ghost) {
-        // cancel if moved too little
-        if (Math.hypot(x - startX, y - startY) < 4) return;
-      }
-      e.preventDefault();
-      moveGhost(x, y);
-
-      // highlight target
-      const target = getCardBelow(x, y);
-      list.querySelectorAll('.clock-card').forEach(c => c.classList.remove('drag-over'));
-      if (target && target.dataset.id !== dragId) target.classList.add('drag-over');
-    }
-
-    function onEnd(e) {
-      const card = e.currentTarget;
-      clearTimeout(card._dragTimer);
-      if (!ghost) { dragId = null; return; }
-
-      const { x, y } = getPointer(e.changedTouches ? e : e);
-      const last = e.changedTouches ? e.changedTouches[0] : e;
-      const target = getCardBelow(last.clientX, last.clientY);
-
-      if (target && target.dataset.id !== dragId) {
-        const fromIdx = order.indexOf(dragId);
-        const toIdx   = order.indexOf(target.dataset.id);
-        order.splice(fromIdx, 1);
-        order.splice(toIdx, 0, dragId);
-        saveOrder();
-        renderAll();   // re-render & re-bind
-      } else {
-        // cleanup without full re-render
-        list.querySelectorAll('.clock-card').forEach(c => {
-          c.classList.remove('dragging', 'drag-over');
-        });
-      }
-
-      ghost.remove();
-      ghost = null;
-      dragId = null;
-    }
-
-    cards.forEach(card => {
-      card.addEventListener('mousedown',  onStart, { passive: true });
-      card.addEventListener('touchstart', onStart, { passive: true });
-      card.addEventListener('mousemove',  onMove);
-      card.addEventListener('touchmove',  onMove, { passive: false });
-      card.addEventListener('mouseup',    onEnd);
-      card.addEventListener('touchend',   onEnd);
-    });
+    // Start: event delegation on list
+    list.addEventListener('mousedown',  onDragStart, { passive: true });
+    list.addEventListener('touchstart', onDragStart, { passive: true });
+    // Move / End: document-level so touch stays tracked across card boundaries
+    document.addEventListener('mousemove', onDragMove);
+    document.addEventListener('touchmove', onDragMove, { passive: false });
+    document.addEventListener('mouseup',   onDragEnd);
+    document.addEventListener('touchend',  onDragEnd);
   }
 
   // ── Init ──────────────────────────────────────────────────────────────────
   renderAll();
   startClock();
+  initDrag();   // called ONCE — not inside renderAll
   tryGPS();
 </script>
 </body>
