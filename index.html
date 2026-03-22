@@ -9,292 +9,372 @@
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+    /* ── Theme Variables ── */
     :root {
-      --bg: #0D0D0F;
-      --card: #13131A;
-      --card-border: rgba(255,255,255,0.07);
-      --text-primary: #F0F0F5;
-      --text-muted: #6B6B80;
-      --text-dim: #9090A8;
-      --accent-1: #A855F7;
-      --accent-2: #22D3EE;
-      --drag-bg: #1E1E2E;
+      --bg:           #04070F;
+      --card:         #0A1220;
+      --card-border:  rgba(80,160,255,0.09);
+      --card-shadow:  0 4px 28px rgba(0,0,0,0.5);
+      --text-primary: #D8EEFF;
+      --text-muted:   #3E5A7A;
+      --text-dim:     #5A7898;
+      --accent-1:     #9B5CF6;
+      --accent-2:     #00CFEA;
+      --g-green:      #4ADE80;
+      --g-yellow:     #FCD34D;
+      --g-red:        #F87171;
+      --header-bg:    rgba(4,7,15,0.88);
+      --separator:    rgba(80,160,255,0.07);
+      --sheet-bg:     #080E1C;
+      --sheet-border: rgba(80,160,255,0.12);
+      --overlay-bg:   rgba(0,0,10,0.78);
+      --toggle-off:   rgba(80,160,255,0.15);
+      --gps-bg:       rgba(255,255,255,0.05);
+    }
+    body.light {
+      --bg:           #F5F0E6;
+      --card:         #FFFDF9;
+      --card-border:  rgba(0,0,0,0.07);
+      --card-shadow:  0 2px 18px rgba(0,0,0,0.07);
+      --text-primary: #1A1428;
+      --text-muted:   #9A8878;
+      --text-dim:     #7A6858;
+      --accent-1:     #7C3AED;
+      --accent-2:     #0891B2;
+      --g-green:      #16A34A;
+      --g-yellow:     #D97706;
+      --g-red:        #DC2626;
+      --header-bg:    rgba(245,240,230,0.92);
+      --separator:    rgba(0,0,0,0.07);
+      --sheet-bg:     #F5F0E6;
+      --sheet-border: rgba(0,0,0,0.09);
+      --overlay-bg:   rgba(0,0,0,0.35);
+      --toggle-off:   rgba(0,0,0,0.13);
+      --gps-bg:       rgba(0,0,0,0.05);
     }
 
     html, body {
-      height: 100%;
-      background: var(--bg);
+      min-height: 100%;
       font-family: 'Inter', sans-serif;
       color: var(--text-primary);
       -webkit-font-smoothing: antialiased;
       overscroll-behavior: none;
+      background: var(--bg);
+      transition: background 0.35s, color 0.35s;
     }
+
+    /* Night city: warm glow at bottom */
+    body::before {
+      content: '';
+      position: fixed; bottom: 0; left: 0; right: 0; height: 260px;
+      background:
+        radial-gradient(ellipse at 25% 100%, rgba(255,140,50,0.09) 0%, transparent 55%),
+        radial-gradient(ellipse at 75% 100%, rgba(80,160,255,0.08) 0%, transparent 55%),
+        radial-gradient(ellipse at 50% 100%, rgba(255,200,80,0.06) 0%, transparent 65%);
+      pointer-events: none; z-index: 0;
+      transition: opacity 0.35s;
+    }
+    body.light::before { opacity: 0; }
 
     /* ── Header ── */
     header {
-      position: sticky;
-      top: 0;
-      z-index: 100;
-      background: rgba(13,13,15,0.85);
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
-      padding: 18px 20px 14px;
-      border-bottom: 1px solid var(--card-border);
+      position: sticky; top: 0; z-index: 100;
+      background: var(--header-bg);
+      backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+      padding: 16px 20px 14px;
+      border-bottom: 1px solid var(--separator);
     }
     .header-inner {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      max-width: 480px;
-      margin: 0 auto;
+      display: flex; align-items: center; justify-content: space-between;
+      max-width: 480px; margin: 0 auto;
     }
     .header-title {
-      font-size: 18px;
-      font-weight: 700;
-      letter-spacing: -0.3px;
+      font-size: 18px; font-weight: 700; letter-spacing: -0.3px;
       background: linear-gradient(90deg, var(--accent-1), var(--accent-2));
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
       background-clip: text;
     }
-    .header-sub {
-      font-size: 11px;
-      color: var(--text-muted);
-      font-weight: 400;
-      letter-spacing: 0.3px;
-    }
+    .header-sub { font-size: 11px; color: var(--text-muted); margin-top: 1px; }
+    .header-right { display: flex; align-items: center; gap: 8px; }
+
     .gps-badge {
-      display: flex;
-      align-items: center;
-      gap: 5px;
-      font-size: 11px;
-      color: var(--text-muted);
-      background: rgba(255,255,255,0.05);
-      border: 1px solid var(--card-border);
-      border-radius: 20px;
-      padding: 5px 10px;
+      display: flex; align-items: center; gap: 5px;
+      font-size: 11px; color: var(--text-muted);
+      background: var(--gps-bg); border: 1px solid var(--card-border);
+      border-radius: 20px; padding: 5px 10px;
     }
     .gps-dot {
-      width: 6px; height: 6px;
-      border-radius: 50%;
-      background: var(--text-muted);
-      transition: background 0.4s;
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--text-muted); transition: background 0.4s;
     }
-    .gps-dot.active { background: #4ADE80; box-shadow: 0 0 6px #4ADE80; }
-    .gps-dot.denied { background: #F87171; }
+    .gps-dot.active { background: var(--g-green); box-shadow: 0 0 6px var(--g-green); }
+    .gps-dot.denied { background: var(--g-red); }
 
-    /* ── Main container ── */
+    .settings-btn {
+      width: 36px; height: 36px; border-radius: 50%;
+      border: 1px solid var(--card-border);
+      background: var(--gps-bg);
+      color: var(--text-dim); cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.2s, color 0.2s, transform 0.15s;
+    }
+    .settings-btn:active { transform: scale(0.9); }
+    .settings-btn:hover  { background: rgba(155,92,246,0.15); color: var(--accent-1); }
+
+    /* ── Main ── */
     main {
-      max-width: 480px;
-      margin: 0 auto;
+      position: relative; z-index: 1;
+      max-width: 480px; margin: 0 auto;
       padding: 20px 16px 40px;
     }
+    .card-list { display: flex; flex-direction: column; gap: 12px; }
 
     /* ── Clock Card ── */
-    .card-list {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-    }
-
     .clock-card {
       position: relative;
       background: var(--card);
       border: 1px solid var(--card-border);
       border-radius: 20px;
-      padding: 22px 20px 20px;
+      padding: 20px 20px 0;
       cursor: grab;
-      user-select: none;
-      -webkit-user-select: none;
-      transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease, opacity 0.18s ease;
+      user-select: none; -webkit-user-select: none;
       touch-action: none;
-      will-change: transform;
       overflow: hidden;
+      box-shadow: var(--card-shadow);
+      transition: box-shadow 0.2s, border-color 0.2s, opacity 0.18s, background 0.35s;
     }
+    /* Day/night ambient tint */
     .clock-card::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      border-radius: 20px;
-      opacity: 0;
-      transition: opacity 0.3s;
-      pointer-events: none;
+      content: ''; position: absolute; inset: 0; border-radius: 20px;
+      pointer-events: none; opacity: 0; transition: opacity 0.4s;
     }
-    /* Day tint */
     .clock-card.day::before {
       background: radial-gradient(ellipse at top right, rgba(251,191,36,0.07) 0%, transparent 60%);
       opacity: 1;
     }
-    /* Night tint */
     .clock-card.night::before {
       background: radial-gradient(ellipse at bottom left, rgba(99,102,241,0.09) 0%, transparent 60%);
       opacity: 1;
     }
-
-    .clock-card.dragging {
-      opacity: 0.4;
-      border-color: rgba(168,85,247,0.3);
-    }
-    .clock-card.drag-over {
-      border-color: rgba(34,211,238,0.5);
-      box-shadow: 0 0 0 1px rgba(34,211,238,0.3), 0 8px 32px rgba(0,0,0,0.4);
-      transform: scale(1.01);
-    }
-
-    /* drag ghost */
-    .drag-ghost {
-      position: fixed;
-      pointer-events: none;
-      z-index: 9999;
-      opacity: 0.92;
-      transform: scale(1.04) rotate(1.5deg);
-      box-shadow: 0 20px 50px rgba(0,0,0,0.6), 0 0 0 1px rgba(168,85,247,0.4);
-      border-radius: 20px;
-      background: var(--drag-bg);
-      border: 1px solid rgba(168,85,247,0.3);
-      transition: none;
-    }
-
-    /* ── Drag handle ── */
-    .drag-handle {
-      position: absolute;
-      top: 50%;
-      right: 18px;
-      transform: translateY(-50%);
-      display: flex;
-      flex-direction: column;
-      gap: 3.5px;
-      padding: 8px 4px;
-      opacity: 0.3;
-      transition: opacity 0.2s;
-    }
-    .clock-card:active .drag-handle,
-    .clock-card:hover .drag-handle { opacity: 0.7; }
-    .drag-handle span {
-      display: block;
-      width: 18px;
-      height: 2px;
-      background: var(--text-primary);
-      border-radius: 2px;
-    }
-
-    /* ── Card content ── */
-    .card-content { padding-right: 36px; }
-
-    .card-top {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin-bottom: 12px;
-    }
-    .country-flag {
-      font-size: 22px;
-      line-height: 1;
-    }
-    .city-info {}
-    .city-name {
-      font-size: 15px;
-      font-weight: 600;
-      color: var(--text-primary);
-      letter-spacing: -0.2px;
-    }
-    .country-tag {
-      display: inline-block;
-      font-size: 10px;
-      font-weight: 600;
-      letter-spacing: 0.8px;
-      text-transform: uppercase;
-      color: var(--accent-2);
-      background: rgba(34,211,238,0.1);
-      border: 1px solid rgba(34,211,238,0.15);
-      border-radius: 6px;
-      padding: 2px 7px;
-      margin-top: 3px;
-    }
-
-    .time-display {
-      font-size: 52px;
-      font-weight: 800;
-      letter-spacing: -2px;
-      color: var(--text-primary);
-      line-height: 1;
-      margin-bottom: 6px;
-      font-variant-numeric: tabular-nums;
-    }
-    .time-display .ampm {
-      font-size: 18px;
-      font-weight: 500;
-      letter-spacing: 0px;
-      color: var(--text-dim);
-      margin-left: 4px;
-      vertical-align: middle;
-    }
-
-    .card-bottom {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-    .date-display {
-      font-size: 13px;
-      color: var(--text-muted);
-      font-weight: 400;
-    }
-    .day-night-badge {
-      display: flex;
-      align-items: center;
-      gap: 4px;
-      font-size: 11px;
-      color: var(--text-muted);
-      background: rgba(255,255,255,0.04);
-      border-radius: 10px;
-      padding: 3px 8px;
-    }
-
-    /* top-card accent line */
+    /* Top accent bar on first card */
     .clock-card:first-child::after {
       content: '';
-      position: absolute;
-      top: 0; left: 20px; right: 20px;
-      height: 2px;
+      position: absolute; top: 0; left: 20px; right: 20px; height: 2px;
       border-radius: 0 0 4px 4px;
       background: linear-gradient(90deg, var(--accent-1), var(--accent-2));
-      opacity: 0.8;
+    }
+    .clock-card.dragging  { opacity: 0.35; border-color: rgba(155,92,246,0.4); }
+    .clock-card.drag-over {
+      border-color: rgba(0,207,234,0.6);
+      box-shadow: 0 0 0 1px rgba(0,207,234,0.3), 0 8px 32px rgba(0,0,0,0.4);
+      transform: scale(1.015);
     }
 
-    /* GPS label */
-    .gps-label {
-      font-size: 10px;
-      font-weight: 600;
-      letter-spacing: 0.6px;
-      text-transform: uppercase;
-      color: #4ADE80;
-      background: rgba(74,222,128,0.08);
-      border: 1px solid rgba(74,222,128,0.2);
-      border-radius: 6px;
-      padding: 2px 7px;
-      display: none;
+    /* Card content */
+    .card-content { padding-right: 32px; }
+
+    .card-top {
+      display: flex; align-items: flex-start;
+      justify-content: space-between;
+      margin-bottom: 10px;
     }
-    .card-list .clock-card:first-child .gps-label { display: inline-block; }
+    .card-top-left { display: flex; align-items: center; gap: 10px; }
+    .country-flag  { font-size: 24px; line-height: 1; flex-shrink: 0; }
+
+    .city-name {
+      font-size: 15px; font-weight: 600;
+      color: var(--text-primary); letter-spacing: -0.2px;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .gps-label {
+      font-size: 9px; font-weight: 700; letter-spacing: 0.6px;
+      text-transform: uppercase; color: var(--g-green);
+      background: rgba(74,222,128,0.1); border: 1px solid rgba(74,222,128,0.2);
+      border-radius: 5px; padding: 1px 5px; display: none;
+    }
+    .card-list .clock-card:first-child .gps-label { display: inline; }
+
+    .country-tag {
+      font-size: 10px; font-weight: 600; letter-spacing: 0.7px;
+      text-transform: uppercase;
+      color: var(--accent-2);
+      background: rgba(0,207,234,0.1); border: 1px solid rgba(0,207,234,0.15);
+      border-radius: 6px; padding: 2px 7px;
+      margin-top: 3px; display: inline-block;
+    }
+    body.light .country-tag {
+      background: rgba(8,145,178,0.08); border-color: rgba(8,145,178,0.18);
+    }
+
+    /* Time diff badge */
+    .time-diff {
+      font-size: 11px; font-weight: 600;
+      color: var(--text-muted);
+      background: var(--gps-bg); border: 1px solid var(--card-border);
+      border-radius: 8px; padding: 3px 8px;
+      white-space: nowrap;
+    }
+    .time-diff.local {
+      color: var(--g-green);
+      background: rgba(74,222,128,0.08); border-color: rgba(74,222,128,0.2);
+    }
+
+    /* Time display */
+    .time-display {
+      font-size: 54px; font-weight: 800; letter-spacing: -2.5px;
+      color: var(--text-primary); line-height: 1;
+      margin-bottom: 8px; font-variant-numeric: tabular-nums;
+    }
+    .ss-wrap { font-size: 30px; font-weight: 600; letter-spacing: -1px; color: var(--text-dim); }
+    .clock-card:not(.show-seconds) .ss-wrap { display: none; }
+    .ampm { font-size: 18px; font-weight: 500; color: var(--text-dim); margin-left: 4px; }
+
+    /* Card bottom row */
+    .card-bottom {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 14px;
+    }
+    .date-display { font-size: 13px; color: var(--text-muted); }
+
+    /* Business status */
+    .biz-status {
+      display: flex; align-items: center; gap: 5px;
+      font-size: 11px; font-weight: 500; color: var(--text-muted);
+      background: var(--gps-bg); border-radius: 10px; padding: 3px 8px;
+    }
+    .biz-dot {
+      width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
+    }
+    .biz-dot.work  { background: var(--g-green); box-shadow: 0 0 5px var(--g-green); }
+    .biz-dot.early { background: var(--g-yellow); }
+    .biz-dot.sleep { background: var(--g-red); }
+
+    /* Day progress bar */
+    .progress-wrap {
+      height: 3px;
+      background: rgba(255,255,255,0.06);
+      margin: 0 -20px;
+      border-radius: 0 0 20px 20px; overflow: hidden;
+    }
+    body.light .progress-wrap { background: rgba(0,0,0,0.06); }
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent-1), var(--accent-2));
+      border-radius: 0 2px 2px 0;
+      transition: width 1s linear;
+    }
+
+    /* Drag handle */
+    .drag-handle {
+      position: absolute; top: 50%; right: 16px;
+      transform: translateY(-50%);
+      display: flex; flex-direction: column; gap: 3.5px;
+      padding: 8px 4px;
+      opacity: 0.18; transition: opacity 0.2s;
+    }
+    .clock-card:hover .drag-handle,
+    .clock-card:active .drag-handle { opacity: 0.5; }
+    .drag-handle span {
+      display: block; width: 16px; height: 2px;
+      background: var(--text-primary); border-radius: 2px;
+    }
+
+    /* ── Settings Bottom Sheet ── */
+    .sheet-overlay {
+      position: fixed; inset: 0;
+      background: var(--overlay-bg);
+      z-index: 200;
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.3s;
+      backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+    }
+    .sheet-overlay.open { opacity: 1; pointer-events: all; }
+
+    .bottom-sheet {
+      position: absolute; bottom: 0; left: 0; right: 0;
+      max-width: 480px; margin: 0 auto;
+      background: var(--sheet-bg);
+      border-radius: 24px 24px 0 0;
+      border-top: 1px solid var(--sheet-border);
+      padding-bottom: max(env(safe-area-inset-bottom), 20px);
+      transform: translateY(100%);
+      transition: transform 0.38s cubic-bezier(0.34, 1.1, 0.64, 1);
+    }
+    .sheet-overlay.open .bottom-sheet { transform: translateY(0); }
+
+    .sheet-handle {
+      width: 36px; height: 4px;
+      background: var(--card-border); border-radius: 2px;
+      margin: 12px auto 0;
+    }
+    .sheet-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 16px 20px 12px;
+      border-bottom: 1px solid var(--separator);
+    }
+    .sheet-title { font-size: 16px; font-weight: 700; color: var(--text-primary); }
+    .sheet-close {
+      width: 28px; height: 28px; border-radius: 50%;
+      background: var(--gps-bg); border: none; cursor: pointer;
+      color: var(--text-muted); font-size: 13px;
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.2s;
+    }
+    .sheet-close:active { background: var(--card-border); }
+
+    .sheet-body { padding: 6px 0 6px; }
+
+    .setting-section {
+      font-size: 11px; font-weight: 600; letter-spacing: 0.8px;
+      text-transform: uppercase; color: var(--text-muted);
+      padding: 14px 20px 6px;
+    }
+    .setting-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 20px;
+    }
+    .setting-info { flex: 1; padding-right: 16px; }
+    .setting-label { font-size: 15px; font-weight: 500; color: var(--text-primary); margin-bottom: 2px; }
+    .setting-desc  { font-size: 12px; color: var(--text-muted); }
+
+    /* Toggle */
+    .toggle {
+      width: 50px; height: 28px; border-radius: 14px;
+      background: var(--toggle-off);
+      position: relative; cursor: pointer; flex-shrink: 0;
+      transition: background 0.25s;
+    }
+    .toggle.on {
+      background: linear-gradient(135deg, var(--accent-1), var(--accent-2));
+    }
+    .toggle::after {
+      content: ''; position: absolute;
+      top: 3px; left: 3px; width: 22px; height: 22px;
+      border-radius: 50%; background: #fff;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+      transition: transform 0.25s cubic-bezier(0.34, 1.2, 0.64, 1);
+    }
+    .toggle.on::after { transform: translateX(22px); }
+
+    .sheet-sep { height: 1px; background: var(--separator); margin: 4px 20px; }
 
     /* Footer */
     footer {
-      text-align: center;
-      padding: 0 20px 20px;
-      font-size: 11px;
-      color: var(--text-muted);
-      letter-spacing: 0.3px;
+      position: relative; z-index: 1;
+      text-align: center; padding: 0 20px 28px;
+      font-size: 11px; color: var(--text-muted);
     }
 
-    /* ── Animate in ── */
+    /* ── Animations ── */
     @keyframes slideUp {
-      from { opacity: 0; transform: translateY(16px); }
+      from { opacity: 0; transform: translateY(18px); }
       to   { opacity: 1; transform: translateY(0); }
     }
     .clock-card { animation: slideUp 0.35s ease both; }
-    .clock-card:nth-child(1) { animation-delay: 0.05s; }
-    .clock-card:nth-child(2) { animation-delay: 0.12s; }
-    .clock-card:nth-child(3) { animation-delay: 0.19s; }
+    .clock-card:nth-child(1) { animation-delay: 0.04s; }
+    .clock-card:nth-child(2) { animation-delay: 0.10s; }
+    .clock-card:nth-child(3) { animation-delay: 0.16s; }
+    .clock-card.no-anim { animation: none !important; }
   </style>
 </head>
 <body>
@@ -305,9 +385,17 @@
       <div class="header-title">World Clock</div>
       <div class="header-sub">Live · 3 Cities</div>
     </div>
-    <div class="gps-badge">
-      <span class="gps-dot" id="gpsDot"></span>
-      <span id="gpsLabel">Locating…</span>
+    <div class="header-right">
+      <div class="gps-badge">
+        <span class="gps-dot" id="gpsDot"></span>
+        <span id="gpsLabel">Locating…</span>
+      </div>
+      <button class="settings-btn" id="settingsBtn" aria-label="Settings">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+        </svg>
+      </button>
     </div>
   </div>
 </header>
@@ -318,257 +406,317 @@
 
 <footer>Hold &amp; drag cards to reorder</footer>
 
+<!-- Settings Bottom Sheet -->
+<div class="sheet-overlay" id="sheetOverlay">
+  <div class="bottom-sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-header">
+      <span class="sheet-title">Settings</span>
+      <button class="sheet-close" id="sheetClose">✕</button>
+    </div>
+    <div class="sheet-body">
+      <div class="setting-section">Display</div>
+
+      <div class="setting-row">
+        <div class="setting-info">
+          <div class="setting-label">24-Hour Format</div>
+          <div class="setting-desc">Show time as 14:30 instead of 2:30 PM</div>
+        </div>
+        <div class="toggle" id="tog-use24h"></div>
+      </div>
+
+      <div class="setting-row">
+        <div class="setting-info">
+          <div class="setting-label">Show Seconds</div>
+          <div class="setting-desc">Display seconds on the clock face</div>
+        </div>
+        <div class="toggle" id="tog-showSeconds"></div>
+      </div>
+
+      <div class="sheet-sep"></div>
+      <div class="setting-section">Appearance</div>
+
+      <div class="setting-row">
+        <div class="setting-info">
+          <div class="setting-label">Dark Mode</div>
+          <div class="setting-desc">Night city view · toggle for Ivory light</div>
+        </div>
+        <div class="toggle" id="tog-darkMode"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
   // ── City data ──────────────────────────────────────────────────────────────
   const CITIES = {
-    seoul:     { id: 'seoul',     name: 'Seoul',     country: 'South Korea',    flag: '🇰🇷', tz: 'Asia/Seoul',         countryCode: 'KR' },
-    hanoi:     { id: 'hanoi',     name: 'Hanoi',     country: 'Vietnam',        flag: '🇻🇳', tz: 'Asia/Ho_Chi_Minh',  countryCode: 'VN' },
-    sandiego:  { id: 'sandiego',  name: 'San Diego', country: 'United States',  flag: '🇺🇸', tz: 'America/Los_Angeles', countryCode: 'US' },
+    seoul:    { id: 'seoul',    name: 'Seoul',     country: 'South Korea',   flag: '🇰🇷', tz: 'Asia/Seoul',          cc: 'KR' },
+    hanoi:    { id: 'hanoi',    name: 'Hanoi',     country: 'Vietnam',       flag: '🇻🇳', tz: 'Asia/Ho_Chi_Minh',   cc: 'VN' },
+    sandiego: { id: 'sandiego', name: 'San Diego', country: 'United States', flag: '🇺🇸', tz: 'America/Los_Angeles', cc: 'US' },
   };
-
   const DEFAULT_ORDER = ['seoul', 'hanoi', 'sandiego'];
-  const LS_KEY = 'tz-order';
+  const LS_ORDER    = 'tz-order';
+  const LS_SETTINGS = 'tz-settings';
 
-  // ── State ──────────────────────────────────────────────────────────────────
-  let order = loadOrder();
-  let timerID = null;
+  // ── Settings ──────────────────────────────────────────────────────────────
+  const DEFAULTS = { showSeconds: false, use24h: true, darkMode: true };
+  let S = (() => {
+    try { const s = JSON.parse(localStorage.getItem(LS_SETTINGS)); if (s) return { ...DEFAULTS, ...s }; } catch(_) {}
+    return { ...DEFAULTS };
+  })();
+  const saveS = () => localStorage.setItem(LS_SETTINGS, JSON.stringify(S));
+  const applyTheme = () => document.body.classList.toggle('light', !S.darkMode);
 
-  // ── Helpers ───────────────────────────────────────────────────────────────
-  function loadOrder() {
-    try {
-      const saved = JSON.parse(localStorage.getItem(LS_KEY));
-      if (Array.isArray(saved) && saved.length === 3 &&
-          saved.every(id => CITIES[id])) return saved;
-    } catch (_) {}
+  // ── Order ─────────────────────────────────────────────────────────────────
+  let order = (() => {
+    try { const o = JSON.parse(localStorage.getItem(LS_ORDER)); if (Array.isArray(o) && o.length === 3 && o.every(id => CITIES[id])) return o; } catch(_) {}
     return [...DEFAULT_ORDER];
-  }
+  })();
+  const saveOrder = () => localStorage.setItem(LS_ORDER, JSON.stringify(order));
 
-  function saveOrder() {
-    localStorage.setItem(LS_KEY, JSON.stringify(order));
+  // ── Time helpers ──────────────────────────────────────────────────────────
+  let localTZ = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+  function tzOffsetH(tz) {
+    const now = new Date();
+    const a = new Date(now.toLocaleString('en-US', { timeZone: tz }));
+    const b = new Date(now.toLocaleString('en-US', { timeZone: 'UTC' }));
+    return Math.round((a - b) / 3600000);
+  }
+  function timeDiff(tz) {
+    const d = tzOffsetH(tz) - tzOffsetH(localTZ);
+    if (d === 0) return { label: 'Local', local: true };
+    return { label: d > 0 ? `+${d}h` : `${d}h`, local: false };
+  }
+  function bizStatus(h) {
+    if (h >= 9 && h < 18)                      return { cls: 'work',  label: 'Working' };
+    if ((h >= 7 && h < 9)||(h >= 18 && h < 22)) return { cls: 'early', label: 'Early/Late' };
+    return { cls: 'sleep', label: 'Sleeping' };
   }
 
   function getTimeData(tz) {
     const now = new Date();
-    const timeFmt = new Intl.DateTimeFormat('en-US', {
-      timeZone: tz, hour: 'numeric', minute: '2-digit', second: '2-digit',
-      hour12: true
-    });
-    const dateFmt = new Intl.DateTimeFormat('en-US', {
-      timeZone: tz, weekday: 'short', month: 'short', day: 'numeric'
-    });
-    const hourFmt = new Intl.DateTimeFormat('en-US', {
-      timeZone: tz, hour: 'numeric', hour12: false
-    });
-    const rawTime = timeFmt.format(now);          // e.g. "9:45:32 AM"
-    const parts = rawTime.match(/^(\d+):(\d{2}):(\d{2})\s*(AM|PM)$/i);
+    const f = (opts) => new Intl.DateTimeFormat('en-US', { timeZone: tz, ...opts }).format(now);
+    const hour   = parseInt(f({ hour: 'numeric', hour12: false }), 10);
+    const minute = parseInt(f({ minute: '2-digit' }), 10);
+    const second = parseInt(f({ second: '2-digit' }), 10);
+    const hh   = S.use24h ? String(hour).padStart(2, '0') : String(hour % 12 || 12).padStart(2, '0');
+    const ampm = S.use24h ? '' : (hour < 12 ? 'AM' : 'PM');
     return {
-      hh:   parts ? parts[1].padStart(2, '0') : '--',
-      mm:   parts ? parts[2] : '--',
-      ss:   parts ? parts[3] : '--',
-      ampm: parts ? parts[4] : '',
-      date: dateFmt.format(now),
-      hour: parseInt(hourFmt.format(now), 10),
+      hh, ampm,
+      mm:   String(minute).padStart(2, '0'),
+      ss:   String(second).padStart(2, '0'),
+      date: f({ weekday: 'short', month: 'short', day: 'numeric' }),
+      hour, minute,
+      progress: (hour * 60 + minute) / 1440 * 100,
+      isDay: hour >= 6 && hour < 20,
     };
   }
 
-  function isDay(hour) { return hour >= 6 && hour < 20; }
-
-  // ── Render ────────────────────────────────────────────────────────────────
-  function buildCard(cityId) {
-    const city = CITIES[cityId];
-    const t = getTimeData(city.tz);
-    const day = isDay(t.hour);
-
+  // ── Build card ─────────────────────────────────────────────────────────────
+  function buildCard(id) {
+    const city = CITIES[id];
+    const t    = getTimeData(city.tz);
+    const biz  = bizStatus(t.hour);
+    const diff = timeDiff(city.tz);
     const card = document.createElement('div');
-    card.className = `clock-card ${day ? 'day' : 'night'}`;
-    card.dataset.id = cityId;
+    card.className = `clock-card ${t.isDay ? 'day' : 'night'}${S.showSeconds ? ' show-seconds' : ''}`;
+    card.dataset.id = id;
     card.innerHTML = `
       <div class="card-content">
         <div class="card-top">
-          <span class="country-flag">${city.flag}</span>
-          <div class="city-info">
-            <div class="city-name">
-              ${city.name}
-              <span class="gps-label">GPS</span>
+          <div class="card-top-left">
+            <span class="country-flag">${city.flag}</span>
+            <div>
+              <div class="city-name">${city.name}<span class="gps-label">GPS</span></div>
+              <span class="country-tag">${city.country}</span>
             </div>
-            <span class="country-tag">${city.country}</span>
           </div>
+          <span class="time-diff${diff.local ? ' local' : ''}">${diff.label}</span>
         </div>
         <div class="time-display">
-          <span class="hh">${t.hh}</span>:<span class="mm">${t.mm}</span>:<span class="ss">${t.ss}</span><span class="ampm">${t.ampm}</span>
+          <span class="t-hh">${t.hh}</span>:<span class="t-mm">${t.mm}</span><span class="ss-wrap">:<span class="t-ss">${t.ss}</span></span><span class="t-ampm">${t.ampm ? ' ' + t.ampm : ''}</span>
         </div>
         <div class="card-bottom">
           <span class="date-display">${t.date}</span>
-          <span class="day-night-badge">${day ? '☀️ Day' : '🌙 Night'}</span>
+          <span class="biz-status"><span class="biz-dot ${biz.cls}"></span><span class="biz-label">${biz.label}</span></span>
         </div>
       </div>
-      <div class="drag-handle">
-        <span></span><span></span><span></span>
-      </div>
+      <div class="progress-wrap"><div class="progress-fill" style="width:${t.progress.toFixed(1)}%"></div></div>
+      <div class="drag-handle"><span></span><span></span><span></span></div>
     `;
     return card;
   }
 
-  function renderAll() {
+  // ── Render (FLIP animation for reorder) ───────────────────────────────────
+  function renderAll(flip = true) {
     const list = document.getElementById('cardList');
+    const firstPos = new Map();
+    if (flip) {
+      [...list.querySelectorAll('.clock-card')].forEach(c =>
+        firstPos.set(c.dataset.id, c.getBoundingClientRect())
+      );
+    }
     list.innerHTML = '';
-    order.forEach(id => list.appendChild(buildCard(id)));
+    order.forEach(id => {
+      const card = buildCard(id);
+      if (!flip) card.classList.add('no-anim');
+      list.appendChild(card);
+    });
+    // FLIP
+    if (flip && firstPos.size) {
+      [...list.querySelectorAll('.clock-card')].forEach(card => {
+        const first = firstPos.get(card.dataset.id);
+        if (!first) return;
+        card.classList.add('no-anim');
+        const dy = first.top - card.getBoundingClientRect().top;
+        if (Math.abs(dy) < 1) return;
+        card.style.cssText += 'transition:none;transform:translateY(' + dy + 'px)';
+        requestAnimationFrame(() => {
+          card.style.transition = 'transform 0.32s cubic-bezier(0.25,0.46,0.45,0.94)';
+          card.style.transform  = 'translateY(0)';
+          card.addEventListener('transitionend', () => {
+            card.style.transition = card.style.transform = '';
+            card.classList.remove('no-anim');
+          }, { once: true });
+        });
+      });
+    }
   }
 
+  // ── Live update (every second, no re-render) ──────────────────────────────
   function updateTimes() {
     document.querySelectorAll('.clock-card').forEach(card => {
       const city = CITIES[card.dataset.id];
-      const t = getTimeData(city.tz);
-      const day = isDay(t.hour);
-      card.querySelector('.hh').textContent = t.hh;
-      card.querySelector('.mm').textContent = t.mm;
-      card.querySelector('.ss').textContent = t.ss;
-      card.querySelector('.ampm').textContent = t.ampm;
+      const t   = getTimeData(city.tz);
+      const biz = bizStatus(t.hour);
+      card.querySelector('.t-hh').textContent  = t.hh;
+      card.querySelector('.t-mm').textContent  = t.mm;
+      card.querySelector('.t-ss').textContent  = t.ss;
+      card.querySelector('.t-ampm').textContent = t.ampm ? ' ' + t.ampm : '';
       card.querySelector('.date-display').textContent = t.date;
-      card.querySelector('.day-night-badge').textContent = day ? '☀️ Day' : '🌙 Night';
-      card.classList.toggle('day', day);
-      card.classList.toggle('night', !day);
+      card.querySelector('.progress-fill').style.width = t.progress.toFixed(1) + '%';
+      card.querySelector('.biz-dot').className  = 'biz-dot ' + biz.cls;
+      card.querySelector('.biz-label').textContent = biz.label;
+      card.classList.toggle('day',   t.isDay);
+      card.classList.toggle('night', !t.isDay);
     });
   }
 
+  let timerID;
   function startClock() {
     if (timerID) clearInterval(timerID);
     timerID = setInterval(updateTimes, 1000);
   }
 
   // ── GPS ───────────────────────────────────────────────────────────────────
-  function applyGPS(countryCode) {
-    const match = Object.values(CITIES).find(c => c.countryCode === countryCode);
+  function applyGPS(cc) {
+    const match = Object.values(CITIES).find(c => c.cc === cc);
     if (!match) return;
     const idx = order.indexOf(match.id);
-    if (idx > 0) {
-      order.splice(idx, 1);
-      order.unshift(match.id);
-      saveOrder();
-      renderAll();
-    }
+    if (idx > 0) { order.splice(idx, 1); order.unshift(match.id); saveOrder(); renderAll(); }
   }
-
   function tryGPS() {
-    if (!navigator.geolocation) { setGPSUI('denied'); return; }
-    navigator.geolocation.getCurrentPosition(
-      pos => {
-        setGPSUI('active', 'Located');
-        // Reverse geocode via open API (no key needed)
-        fetch(`https://nominatim.openstreetmap.org/reverse?lat=${pos.coords.latitude}&lon=${pos.coords.longitude}&format=json`)
-          .then(r => r.json())
-          .then(data => {
-            const cc = data?.address?.country_code?.toUpperCase();
-            if (cc) applyGPS(cc);
-          })
-          .catch(() => {});
-      },
-      () => setGPSUI('denied', 'Location off')
-    );
+    if (!navigator.geolocation) { setGPSUI('denied', 'No GPS'); return; }
+    navigator.geolocation.getCurrentPosition(pos => {
+      setGPSUI('active', 'Located');
+      localTZ = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      fetch(`https://nominatim.openstreetmap.org/reverse?lat=${pos.coords.latitude}&lon=${pos.coords.longitude}&format=json`)
+        .then(r => r.json())
+        .then(d => { const cc = d?.address?.country_code?.toUpperCase(); if (cc) applyGPS(cc); renderAll(false); })
+        .catch(() => {});
+    }, () => setGPSUI('denied', 'Location off'));
+  }
+  function setGPSUI(state, label) {
+    document.getElementById('gpsDot').className  = 'gps-dot ' + state;
+    document.getElementById('gpsLabel').textContent = label;
   }
 
-  function setGPSUI(state, label) {
-    const dot = document.getElementById('gpsDot');
-    const lbl = document.getElementById('gpsLabel');
-    dot.className = `gps-dot ${state}`;
-    if (label) lbl.textContent = label;
+  // ── Settings UI ───────────────────────────────────────────────────────────
+  function syncToggles() {
+    ['use24h','showSeconds','darkMode'].forEach(k => {
+      document.getElementById('tog-' + k).classList.toggle('on', !!S[k]);
+    });
   }
+
+  document.getElementById('settingsBtn').addEventListener('click', () =>
+    document.getElementById('sheetOverlay').classList.add('open'));
+  document.getElementById('sheetClose').addEventListener('click', () =>
+    document.getElementById('sheetOverlay').classList.remove('open'));
+  document.getElementById('sheetOverlay').addEventListener('click', e => {
+    if (e.target === e.currentTarget) e.currentTarget.classList.remove('open');
+  });
+
+  // Toggle: 24h format
+  document.getElementById('tog-use24h').addEventListener('click', () => {
+    S.use24h = !S.use24h; saveS(); syncToggles(); updateTimes();
+  });
+  // Toggle: seconds — no re-render, just toggle CSS class
+  document.getElementById('tog-showSeconds').addEventListener('click', () => {
+    S.showSeconds = !S.showSeconds; saveS(); syncToggles();
+    document.querySelectorAll('.clock-card').forEach(c =>
+      c.classList.toggle('show-seconds', S.showSeconds));
+  });
+  // Toggle: dark/light
+  document.getElementById('tog-darkMode').addEventListener('click', () => {
+    S.darkMode = !S.darkMode; saveS(); syncToggles(); applyTheme();
+  });
 
   // ── Drag & Drop ────────────────────────────────────────────────────────────
-  const ds = {
-    id: null, card: null, ghost: null,
-    started: false, timer: null,
-    curX: 0, curY: 0,   // last known pointer position
-    startX: 0, startY: 0, offX: 0, offY: 0,
-  };
+  const ds = { id:null, card:null, ghost:null, started:false, timer:null, curX:0, curY:0, startX:0, startY:0, offX:0, offY:0 };
 
-  // BUG FIX: touchend has e.touches=[] (empty but truthy) → e.touches[0] = undefined → crash.
-  // Must prefer changedTouches (contains the touch that just ended).
   function ptr(e) {
-    if (e.changedTouches && e.changedTouches.length) {
-      return { x: e.changedTouches[0].clientX, y: e.changedTouches[0].clientY };
-    }
-    if (e.touches && e.touches.length) {
-      return { x: e.touches[0].clientX, y: e.touches[0].clientY };
-    }
+    if (e.changedTouches?.length) return { x: e.changedTouches[0].clientX, y: e.changedTouches[0].clientY };
+    if (e.touches?.length)        return { x: e.touches[0].clientX,        y: e.touches[0].clientY };
     return { x: e.clientX, y: e.clientY };
   }
-
   function startGhost(card, x, y) {
-    if (ds.ghost) return;                   // already started — guard against double call
+    if (ds.ghost) return;
     const r = card.getBoundingClientRect();
-    ds.offX = x - r.left;
-    ds.offY = y - r.top;
+    ds.offX = x - r.left; ds.offY = y - r.top;
     const g = card.cloneNode(true);
     g.removeAttribute('class');
-    g.style.cssText = `
-      position:fixed; pointer-events:none; z-index:9999;
-      width:${r.width}px; height:${r.height}px;
-      left:${r.left}px; top:${r.top}px;
-      animation:none;
-      background:#1E1E2E;
-      border:1px solid rgba(168,85,247,0.5);
-      border-radius:20px;
-      opacity:0.93;
-      transform:scale(1.04) rotate(1deg);
-      box-shadow:0 20px 50px rgba(0,0,0,0.65), 0 0 0 1px rgba(168,85,247,0.35);
-      transition:none; overflow:hidden;
-    `;
+    g.style.cssText = `position:fixed;pointer-events:none;z-index:9999;width:${r.width}px;height:${r.height}px;left:${r.left}px;top:${r.top}px;animation:none;border-radius:20px;overflow:hidden;background:${S.darkMode?'#111D35':'#FFF8EE'};border:1px solid rgba(155,92,246,0.55);opacity:0.93;transform:scale(1.04) rotate(1deg);box-shadow:0 20px 50px rgba(0,0,0,0.55),0 0 0 1px rgba(155,92,246,0.3);transition:none;`;
     document.body.appendChild(g);
     ds.ghost = g;
     card.classList.add('dragging');
     ds.started = true;
-    // Immediately move to current pointer position (finger may have moved during 150ms wait)
     moveGhost(ds.curX, ds.curY);
   }
-
   function moveGhost(x, y) {
     if (!ds.ghost) return;
     ds.ghost.style.left = (x - ds.offX) + 'px';
     ds.ghost.style.top  = (y - ds.offY) + 'px';
   }
-
   function cardAt(x, y) {
     if (ds.ghost) ds.ghost.style.visibility = 'hidden';
     const el = document.elementFromPoint(x, y);
     if (ds.ghost) ds.ghost.style.visibility = '';
     return el?.closest?.('.clock-card[data-id]') || null;
   }
-
   function clearDrag() {
     clearTimeout(ds.timer);
-    // Remove ALL orphaned ghosts from DOM (safety net)
-    document.querySelectorAll('.drag-ghost-el').forEach(g => g.remove());
     if (ds.ghost) { ds.ghost.remove(); ds.ghost = null; }
     if (ds.card)  { ds.card.classList.remove('dragging'); }
     document.querySelectorAll('.clock-card').forEach(c => c.classList.remove('drag-over'));
-    ds.id = null; ds.card = null; ds.started = false; ds.timer = null;
+    ds.id = ds.card = ds.timer = null; ds.started = false;
   }
-
-  // ── Document-level handlers (registered once) ──
   function onDragStart(e) {
-    // Clean up any leftover state from a previous interrupted drag
     clearDrag();
     const card = e.target.closest('.clock-card[data-id]');
     if (!card) return;
     const { x, y } = ptr(e);
-    ds.id = card.dataset.id;
-    ds.card = card;
-    ds.startX = x; ds.startY = y;
-    ds.curX = x;   ds.curY = y;
-    ds.started = false;
+    ds.id = card.dataset.id; ds.card = card;
+    ds.startX = ds.curX = x; ds.startY = ds.curY = y;
     ds.timer = setTimeout(() => startGhost(card, ds.curX, ds.curY), 150);
   }
-
   function onDragMove(e) {
     if (!ds.id) return;
     const { x, y } = ptr(e);
-    ds.curX = x; ds.curY = y;           // always track current position
+    ds.curX = x; ds.curY = y;
     if (!ds.started) {
-      if (Math.hypot(x - ds.startX, y - ds.startY) > 6) {
-        clearTimeout(ds.timer);
-        startGhost(ds.card, ds.startX, ds.startY);
-      } else return;
+      if (Math.hypot(x - ds.startX, y - ds.startY) > 6) { clearTimeout(ds.timer); startGhost(ds.card, ds.startX, ds.startY); }
+      else return;
     }
     e.preventDefault();
     moveGhost(x, y);
@@ -576,7 +724,6 @@
     document.querySelectorAll('.clock-card').forEach(c => c.classList.remove('drag-over'));
     if (target && target.dataset.id !== ds.id) target.classList.add('drag-over');
   }
-
   function onDragEnd(e) {
     clearTimeout(ds.timer);
     if (!ds.started || !ds.id) { clearDrag(); return; }
@@ -584,35 +731,30 @@
       const { x, y } = ptr(e);
       const target = cardAt(x, y);
       if (target && target.dataset.id !== ds.id) {
-        const from = order.indexOf(ds.id);
-        const to   = order.indexOf(target.dataset.id);
-        order.splice(from, 1);
-        order.splice(to, 0, ds.id);
-        saveOrder();
-        clearDrag();
-        renderAll();
-        return;
+        const from = order.indexOf(ds.id), to = order.indexOf(target.dataset.id);
+        order.splice(from, 1); order.splice(to, 0, ds.id);
+        saveOrder(); clearDrag(); renderAll(true); return;
       }
-    } catch (_) {}
+    } catch(_) {}
     clearDrag();
   }
-
   function initDrag() {
     const list = document.getElementById('cardList');
     list.addEventListener('mousedown',  onDragStart, { passive: true });
     list.addEventListener('touchstart', onDragStart, { passive: true });
-    document.addEventListener('mousemove', onDragMove);
-    document.addEventListener('touchmove', onDragMove, { passive: false });
-    document.addEventListener('mouseup',   onDragEnd);
-    document.addEventListener('touchend',  onDragEnd);
-    // Catch cancelled touches (e.g. phone call interruption)
+    document.addEventListener('mousemove',   onDragMove);
+    document.addEventListener('touchmove',   onDragMove, { passive: false });
+    document.addEventListener('mouseup',     onDragEnd);
+    document.addEventListener('touchend',    onDragEnd);
     document.addEventListener('touchcancel', clearDrag);
   }
 
   // ── Init ──────────────────────────────────────────────────────────────────
-  renderAll();
+  applyTheme();
+  renderAll(false);   // initial render (slideUp animation via CSS)
   startClock();
-  initDrag();   // called ONCE — not inside renderAll
+  syncToggles();
+  initDrag();
   tryGPS();
 </script>
 </body>
