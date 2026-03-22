@@ -177,7 +177,7 @@ test.describe('World Clock — Full Feature Suite', () => {
     await page.waitForTimeout(500);
     const labels = await page.locator('.biz-label').allTextContents();
     expect(labels.length).toBe(3);
-    for (const l of labels) expect(l).toMatch(/Working|Early\/Late|Sleeping/);
+    for (const l of labels) expect(l).toMatch(/Working|Early\/Late|Sleeping|Weekend/);
     console.log('✅ 비즈니스 배지 OK:', labels);
   });
 
@@ -278,8 +278,27 @@ test.describe('World Clock — Full Feature Suite', () => {
     console.log('✅ localStorage 설정 복원 OK');
   });
 
-  // ── 15. 오버레이 클릭으로 시트 닫기 ─────────────────────────────────────
-  test('15. 오버레이 클릭으로 바텀시트 닫기', async ({ page }) => {
+  // ── 15. Weekend 배지 - 주말 도시에는 Weekend 표시 ──────────────────────────
+  test('15. Weekend 배지 - 주말 요일엔 Weekend 클래스', async ({ page }) => {
+    await page.setViewportSize(MOBILE);
+    await page.goto(FILE_URL);
+    await page.waitForTimeout(500);
+    // 각 카드에서 biz dot/label 쌍이 일치하는지 확인
+    const dots   = await page.locator('.biz-dot').evaluateAll(els => els.map(e => e.className));
+    const labels = await page.locator('.biz-label').allTextContents();
+    expect(dots.length).toBe(3);
+    for (let i = 0; i < 3; i++) {
+      const cls = dots[i]; const lbl = labels[i];
+      if (cls.includes('weekend')) expect(lbl).toBe('Weekend');
+      if (cls.includes('work'))    expect(lbl).toBe('Working');
+      if (cls.includes('early'))   expect(lbl).toBe('Early/Late');
+      if (cls.includes('sleep'))   expect(lbl).toBe('Sleeping');
+    }
+    console.log('✅ Weekend 배지 dot/label 일관성 OK:', dots.map((d,i) => `${d.split(' ').pop()}=${labels[i]}`));
+  });
+
+  // ── 16. 오버레이 클릭으로 시트 닫기 ─────────────────────────────────────
+  test('16. 오버레이 클릭으로 바텀시트 닫기', async ({ page }) => {
     await page.setViewportSize(MOBILE);
     await page.goto(FILE_URL);
     await page.waitForTimeout(400);
